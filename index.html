@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Poster Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    input {
+      display: block;
+      margin: 0.5rem auto;
+      padding: 0.6rem;
+      width: 80%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      margin-top: 1rem;
+      padding: 0.8rem 1.2rem;
+      background: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #005fa3;
+    }
+
+    #result img {
+      margin-top: 2rem;
+      max-width: 100%;
+      aspect-ratio: 9 / 16;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    #result {
+      margin-top: 2rem;
+    }
+
+    #history img {
+      width: 80px;
+      margin: 4px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Poster Generator</h1>
+  <input id="title" placeholder="Title">
+  <input id="subtitle" placeholder="Subtitle">
+  <input id="caption" placeholder="Caption">
+  <input id="desc" placeholder="Image Description">
+  <button onclick="generate()">Generate</button>
+
+  <div id="result">
+    <div id="placeholder" style="width:100%; aspect-ratio:9/16; background:#ddd; border-radius:12px;"></div>
+  </div>
+
+  <div id="history"></div>
+
+  <script>
+    async function generate() {
+      const payload = {
+        title: document.getElementById('title').value,
+        subtitle: document.getElementById('subtitle').value,
+        caption: document.getElementById('caption').value,
+        desc: document.getElementById('desc').value
+      };
+
+      const res = await fetch('/.netlify/functions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      const imageUrl = data.imageUrl;
+
+      document.getElementById('placeholder')?.remove();
+      document.getElementById('result').innerHTML = `
+        <img id="poster" src="${imageUrl}">
+        <br><button onclick="downloadImage()">Download</button>
+      `;
+
+      saveToHistory(imageUrl);
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.href = document.getElementById('poster').src;
+      link.download = 'poster.jpg';
+      link.click();
+    }
+
+    function saveToHistory(url) {
+      let history = JSON.parse(localStorage.getItem('posterHistory') || '[]');
+      history.unshift(url);
+      history = history.slice(0, 10); // max 10 thumbnails
+      localStorage.setItem('posterHistory', JSON.stringify(history));
+      renderHistory(history);
+    }
+
+    function renderHistory(history) {
+      const thumbnails = history.map(url => `<img src="${url}">`).join('');
+      document.getElementById('history').innerHTML = `<h3>History</h3>${thumbnails}`;
+    }
+
+    // Load history on page load
+    renderHistory(JSON.parse(localStorage.getItem('posterHistory') || '[]'));
+  </script>
+</body>
+</html>
